@@ -18,9 +18,9 @@ return {
         
         for lines in love.filesystem.lines("mapa.txt") do
             if i == 0 then
-                for w in lines:gmatch("%d+") do
-                    if MapaW == 0 then MapaW = tonumber(w) end
-                    if MapaH == 0 then MapaH = tonumber(w) end
+                for w in (lines .. ","):gmatch("(%d*),") do
+                    if MapaW == 0 then MapaW = tonumber(w)
+                    elseif MapaH == 0 then MapaH = tonumber(w) end
                 end
                 print("mapaW: " .. MapaW)
                 print("mapaH: " .. MapaH)

@@ -51,31 +51,93 @@ local matriz = mapa.carregar()
 -- EXERCICIO!!! ----------------------------------------------------------------
 
 function AtualizarFantasmas(fantasmas, x, y, matriz)
-    IAVermelho(fantasmas, fantasmas.vermelho.x, fantasmas.vermelho.y, x, y, matriz)
-    IAAzul(fantasmas, fantasmas.azul.x, fantasmas.azul.y, x, y, matriz)
-    IARosa(fantasmas, fantasmas.rosa.x, fantasmas.rosa.y, x, y, matriz)
-    IAAmarelo(fantasmas, fantasmas.amarelo.x, fantasmas.amarelo.y, x, y, matriz)
+    IAVermelho(fantasmas, fantasmas.vermelho, pacman, matriz)
+    IAAzul(fantasmas, fantasmas.azul, pacman, matriz)
+    IARosa(fantasmas, fantasmas.rosa, pacman, matriz)
+    IAAmarelo(fantasmas, fantasmas.amarelo, pacman, matriz)
+
+    for _, fantasma in pairs(fantasmas) do
+        MoverFantasma(fantasma, matriz)
+    end
 end
 
 -- 1) Crie uma função para mover um determinado fantasma
-function MoverFantasma(fantasma, direcao, matriz)
+function MoverFantasma(fantasma, matriz)
+    if not VerificarColisao(fantasma.x, fantasma.y, fantasma.direcao, matriz) then
+        fantasma.x, fantasma.y = NovaPosicao(fantasma.x, fantasma.y, fantasma.direcao)
+    end
+end
+
+function IAVermelho(fantasmasArr, fantasma, pacman, matriz)
+    local alvoX, alvoY = NovaPosicao(pacman.x, pacman.y, pacman.direcao)
+
+    local possiveis = PossiveisMovimentos(fantasma, pacman, matriz)
+
+    local melhor = MOVIMENTO_ENUM.baixo
+    local melhorDist = math.huge
+
+    for _, dir in pairs(possiveis) do
+        local novoX, novoY = NovaPosicao(fantasma.x, fantasma.y, dir)
+        local dist = math.sqrt((alvoX - novoX)^2 + (alvoY - novoY)^2)
+
+        if dist < melhorDist then
+            melhor = dir
+            melhorDist = dist
+        end
+    end
+
+    fantasma.direcao = melhor
+end
+
+function IAAzul(fantasmasArr, fantasma, pacman, matriz)
     
 end
 
-function IAVermelho(fantasmas, fantX, fantY, pacX, pacY, matriz)
+function IARosa(fantasmasArr, fantasma, pacman, matriz)
+    local alvoX, alvoY = NovaPosicao(pacman.x, pacman.y, pacman.direcao, 2)
+
+    local possiveis = PossiveisMovimentos(fantasma, pacman, matriz)
+
+    local melhor = MOVIMENTO_ENUM.baixo
+    local melhorDist = math.huge
+
+    for _, dir in pairs(possiveis) do
+        local novoX, novoY = NovaPosicao(fantasma.x, fantasma.y, dir)
+        local dist = math.sqrt((alvoX - novoX)^2 + (alvoY - novoY)^2)
+
+        if dist < melhorDist then
+            melhor = dir
+            melhorDist = dist
+        end
+    end
+
+    fantasma.direcao = melhor
+end
+
+function IAAmarelo(fantasmasArr, fantasma, pacman, matriz)
     
 end
 
-function IAAzul(fantasmas, fantX, fantY, pacX, pacY, matriz)
-    
-end
+function PossiveisMovimentos(fantasma, pacman, matriz)
+    local possiveis = {}
 
-function IARosa(fantasmas, fantX, fantY, pacX, pacY, matriz)
-    
-end
+    if not VerificarColisao(fantasma.x, fantasma.y, MOVIMENTO_ENUM.cima, matriz) and fantasma.direcao ~= MOVIMENTO_ENUM.baixo then
+        table.insert(possiveis, MOVIMENTO_ENUM.cima)
+    end
 
-function IAAmarelo(fantasmas, fantX, fantY, pacX, pacY, matriz)
-    
+    if not VerificarColisao(fantasma.x, fantasma.y, MOVIMENTO_ENUM.direita, matriz) and fantasma.direcao ~= MOVIMENTO_ENUM.esquerda then
+        table.insert(possiveis, MOVIMENTO_ENUM.direita)
+    end
+
+    if not VerificarColisao(fantasma.x, fantasma.y, MOVIMENTO_ENUM.esquerda, matriz) and fantasma.direcao ~= MOVIMENTO_ENUM.direita then
+        table.insert(possiveis, MOVIMENTO_ENUM.esquerda)
+    end
+
+    if not VerificarColisao(fantasma.x, fantasma.y, MOVIMENTO_ENUM.baixo, matriz) and fantasma.direcao ~= MOVIMENTO_ENUM.cima then
+        table.insert(possiveis, MOVIMENTO_ENUM.baixo)
+    end
+
+    return possiveis
 end
 
 -- FUNCOES PRINCIPAIS ----------------------------------------------------------
@@ -162,18 +224,20 @@ end
 ---Determina a nova posição do passado com a determinada direcao
 ---note que a funcao retorna dois valores
 ---o novo x e o novo y
-function NovaPosicao(x, y, mov)
+function NovaPosicao(x, y, mov, dist)
+    dist = dist or 1
+
     local novoX = x
     local novoY = y
 
     if mov == MOVIMENTO_ENUM.cima then
-        novoY = novoY - 1
+        novoY = novoY - dist
     elseif mov == MOVIMENTO_ENUM.direita then
-        novoX = novoX + 1
+        novoX = novoX + dist
     elseif mov == MOVIMENTO_ENUM.baixo then
-        novoY = novoY + 1
+        novoY = novoY + dist
     elseif mov == MOVIMENTO_ENUM.esquerda then
-        novoX = novoX - 1
+        novoX = novoX - dist
     end
 
     -- reduz 1 pois a matriz começa em 1 e não em 0
@@ -184,8 +248,31 @@ end
 function VerificarColisao(x, y, mov, matriz)
     local novoX, novoY = NovaPosicao(x, y, mov)
 
+    if novoX < 1 or novoX > MapaW or novoY < 1 or novoY > MapaH then
+        return false
+    end
+
     if matriz[novoX][novoY] == 'x' then
         return true
+    end
+
+    return false
+end
+
+function VerificaIntersecao(x, y, matriz)
+    local n = 0
+    for i = x - 1, x + 1 do
+        for j = y - 1, y + 1 do
+            if i >= 1 and i <= MapaW and j >= 1 and j <= MapaH then
+                if matriz[i][j] ~= 'x' then
+                    n = n + 1
+                end
+
+                if n > 3 then
+                    return true
+                end
+            end
+        end
     end
 
     return false
