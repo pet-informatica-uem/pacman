@@ -1,11 +1,3 @@
--- DISCLAIMER
--- Este código foi feito para fins de estudo e aprendizado.
--- Algumas coisas como:
---     - Argumentos de funcoes com o mesmo nome de variaveis
---       definidas anteriormente é uma má prática de programação
---       porém foi feito desse jeito para deixar as funções mais puras
---       possiveis e facilitar o entendimento
-
 -- REQUIRE ---------------------------------------------------------------------
 
 require("conf")
@@ -16,7 +8,6 @@ local mapa = require("scripts.mapa")
 local MAX_TEMPO_INVENCIVEL = 3
 local MAX_TEMPO_PERSEGUINDO = 5
 local MAX_TEMPO_RECUANDO = 10
-local STEP = 1/4
 local MOVIMENTO_ENUM = {
     cima = "cima",
     direita = "direita",
@@ -38,17 +29,16 @@ local ESTADO_FANTASMA_ENUM = {
 -- VARIAVEIS -------------------------------------------------------------------
 
 local estado = ESTADOS_ENUM.jogando
-local pacman = {x = 14, y = 13, direcao=0}
-local pontos = 0
+local pacman = { x = 14, y = 13, direcao = 0 }
 local tempoInvencivel = 0
 local tempoPerseguindo = 0
 local tempoRecuando = 10
 local invencivel = false
 local fantasmas = {
-    vermelho = {x = 13, y = 8, direcao=0, estado=ESTADO_FANTASMA_ENUM.perseguir},
-    azul     = {x = 14, y = 8, direcao=0, estado=ESTADO_FANTASMA_ENUM.perseguir},
-    rosa     = {x = 15, y = 8, direcao=0, estado=ESTADO_FANTASMA_ENUM.perseguir},
-    amarelo  = {x = 16, y = 8, direcao=0, estado=ESTADO_FANTASMA_ENUM.perseguir},
+    vermelho = { x = 13, y = 8, direcao = 0, estado = ESTADO_FANTASMA_ENUM.perseguir },
+    azul     = { x = 14, y = 8, direcao = 0, estado = ESTADO_FANTASMA_ENUM.perseguir },
+    rosa     = { x = 15, y = 8, direcao = 0, estado = ESTADO_FANTASMA_ENUM.perseguir },
+    amarelo  = { x = 16, y = 8, direcao = 0, estado = ESTADO_FANTASMA_ENUM.perseguir },
 }
 
 -- como o jogo só e atualiazado em intervalos
@@ -102,30 +92,29 @@ end
 
 function IAVermelho(fantasmasArr, fantasma, pacman, matriz)
     local alvoX, alvoY
-    
+
     if fantasma.estado == ESTADO_FANTASMA_ENUM.perseguir then
         alvoX, alvoY = NovaPosicao(pacman.x, pacman.y, pacman.direcao, 2)
     elseif fantasma.estado == ESTADO_FANTASMA_ENUM.fugir then
         local randomTable = {
-            {x=fantasma.x + 1, y=fantasma.y},
-            {x=fantasma.x - 1, y=fantasma.y},
-            {x=fantasma.x, y=fantasma.y + 1},
-            {x=fantasma.x, y=fantasma.y - 1},
+            { x = fantasma.x + 1, y = fantasma.y },
+            { x = fantasma.x - 1, y = fantasma.y },
+            { x = fantasma.x,     y = fantasma.y + 1 },
+            { x = fantasma.x,     y = fantasma.y - 1 },
         }
         local valor = math.random(4)
-        
+
         alvoX, alvoY = NovaPosicao(randomTable[valor].x, randomTable[valor].y, pacman.direcao)
     elseif fantasma.estado == ESTADO_FANTASMA_ENUM.recuar then
         alvoX, alvoY = MapaW, 0
     elseif fantasma.estado == ESTADO_FANTASMA_ENUM.retornar then
         alvoX, alvoY = 13, 8
-    end 
+    end
 
     IA(fantasma, alvoX, alvoY, matriz)
 end
 
 function IAAzul(fantasmasArr, fantasma, pacman, matriz)
-    
 end
 
 function IARosa(fantasmasArr, fantasma, pacman, matriz)
@@ -164,7 +153,7 @@ function IA(fantasma, alvoX, alvoY, matriz)
 
     for _, dir in pairs(possiveis) do
         local novoX, novoY = NovaPosicao(fantasma.x, fantasma.y, dir)
-        local dist = math.sqrt((alvoX - novoX)^2 + (alvoY - novoY)^2)
+        local dist = math.sqrt((alvoX - novoX) ^ 2 + (alvoY - novoY) ^ 2)
 
         if dist < melhorDist then
             melhor = dir
@@ -195,26 +184,16 @@ function AtualizarJogo(dt)
         invencivel = false
     end
 
-    contador = contador + dt
-
-    if contador < STEP then
-        return
-    end
-
     VerificaBuffer()
 
-    matriz[pacman.x][pacman.y] = ' '
+    matriz[math.floor(pacman.x + 0.5)][math.floor(pacman.y + 0.5)] = ' '
 
     if not VerificarColisao(pacman.x, pacman.y, pacman.direcao, matriz) then
         pacman.x, pacman.y = NovaPosicao(pacman.x, pacman.y, pacman.direcao)
-
-        ChecarPontuacao(pacman.x, pacman.y, matriz)
     end
 
-    matriz[pacman.x][pacman.y] = 'p'
-
     AtualizarFantasmas(fantasmas, pacman, matriz, dt)
-    
+
     local fantasma = ChecarDerrota(fantasmas)
     if fantasma then
         if invencivel then
@@ -233,7 +212,7 @@ function love.draw()
     if estado == ESTADOS_ENUM.jogando then
         love.graphics.scale(SCALE, SCALE)
         mapa.desenhar(matriz)
-    
+        DesenharPacman(pacman)
         DesenharFantasmas(fantasmas)
     elseif estado == ESTADOS_ENUM.derrota then
         love.graphics.print("Você perdeu!", 10, 10)
@@ -266,7 +245,7 @@ end
 ---note que a funcao retorna dois valores
 ---o novo x e o novo y
 function NovaPosicao(x, y, mov, dist)
-    dist = dist or 1
+    dist = 1 / 16
 
     local novoX = x
     local novoY = y
@@ -293,8 +272,12 @@ function VerificarColisao(x, y, mov, matriz)
         return false
     end
 
-    if matriz[novoX][novoY] == 'x' then
-        return true
+    for y = math.floor(novoY), math.ceil(novoY) do
+        for x = math.floor(novoX), math.ceil(novoX) do
+            if matriz[x][y] == 'x' then
+                return true
+            end
+        end
     end
 
     return false
@@ -319,47 +302,47 @@ function VerificaIntersecao(x, y, matriz)
     return false
 end
 
-function ChecarPontuacao(x, y, matriz)
-    if matriz[x][y] == '.' then
-        pontos = pontos + 100
-    elseif matriz[x][y] == 'c' then
-        pontos = pontos + 1000
-        tempoInvencivel = MAX_TEMPO_INVENCIVEL
-    end
-end
-
 function ChecarDerrota(fantasmas)
     for _, fantasma in pairs(fantasmas) do
-        if fantasma.x == pacman.x and fantasma.y == pacman.y then
+        -- intersecta fantasma e pacman
+        if (fantasma.x - pacman.x) ^ 2 + (fantasma.y - pacman.y) ^ 2 < 0.5 then
             return fantasma
         end
     end
-    
+
     return nil
 end
 
 function DesenharFantasmas(fantasmas)
     love.graphics.draw(
-        ASSETS_MAP.fantasma_vermelho, 
-        (fantasmas.vermelho.x-1)*(16), 
-        (fantasmas.vermelho.y-1)*(16)
+        ASSETS_MAP.fantasma_vermelho,
+        (fantasmas.vermelho.x - 1) * (16),
+        (fantasmas.vermelho.y - 1) * (16)
     )
 
     love.graphics.draw(
-        ASSETS_MAP.fantasma_azul, 
-        (fantasmas.azul.x-1)*(16), 
-        (fantasmas.azul.y-1)*(16)
+        ASSETS_MAP.fantasma_azul,
+        (fantasmas.azul.x - 1) * (16),
+        (fantasmas.azul.y - 1) * (16)
     )
 
     love.graphics.draw(
-        ASSETS_MAP.fantasma_rosa, 
-        (fantasmas.rosa.x-1)*(16), 
-        (fantasmas.rosa.y-1)*(16)
+        ASSETS_MAP.fantasma_rosa,
+        (fantasmas.rosa.x - 1) * (16),
+        (fantasmas.rosa.y - 1) * (16)
     )
 
     love.graphics.draw(
-        ASSETS_MAP.fantasma_amarelo, 
-        (fantasmas.amarelo.x-1)*(16), 
-        (fantasmas.amarelo.y-1)*(16)
+        ASSETS_MAP.fantasma_amarelo,
+        (fantasmas.amarelo.x - 1) * (16),
+        (fantasmas.amarelo.y - 1) * (16)
+    )
+end
+
+function DesenharPacman(pacman)
+    love.graphics.draw(
+        ASSETS_MAP.pacman,
+        (pacman.x - 1) * 16,
+        (pacman.y - 1) * 16
     )
 end
