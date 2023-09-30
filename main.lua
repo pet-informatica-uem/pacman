@@ -94,7 +94,7 @@ function IAVermelho(fantasmasArr, fantasma, pacman, matriz)
     local alvoX, alvoY
 
     if fantasma.estado == ESTADO_FANTASMA_ENUM.perseguir then
-        alvoX, alvoY = NovaPosicao(pacman.x, pacman.y, pacman.direcao, 2)
+        alvoX, alvoY = pacman.x, pacman.y
     elseif fantasma.estado == ESTADO_FANTASMA_ENUM.fugir then
         local randomTable = {
             { x = fantasma.x + 1, y = fantasma.y },
@@ -108,19 +108,88 @@ function IAVermelho(fantasmasArr, fantasma, pacman, matriz)
     elseif fantasma.estado == ESTADO_FANTASMA_ENUM.recuar then
         alvoX, alvoY = MapaW, 0
     elseif fantasma.estado == ESTADO_FANTASMA_ENUM.retornar then
-        alvoX, alvoY = 13, 8
+        alvoX, alvoY = 15, 8
     end
 
     IA(fantasma, alvoX, alvoY, matriz)
 end
 
 function IAAzul(fantasmasArr, fantasma, pacman, matriz)
+    local alvoX, alvoY
+
+    if fantasma.estado == ESTADO_FANTASMA_ENUM.perseguir then
+        local pX, pY = NovaPosicao(pacman.x, pacman.y, pacman.direcao, 1)
+        local vX, vY = fantasmasArr.vermelho.x, fantasmasArr.vermelho.y
+        alvoX, alvoY = vX + (pX - vX) * 2, vY + (pY - vY) * 2
+    elseif fantasma.estado == ESTADO_FANTASMA_ENUM.fugir then
+        local randomTable = {
+            { x = fantasma.x + 1, y = fantasma.y },
+            { x = fantasma.x - 1, y = fantasma.y },
+            { x = fantasma.x,     y = fantasma.y + 1 },
+            { x = fantasma.x,     y = fantasma.y - 1 },
+        }
+        local valor = math.random(4)
+
+        alvoX, alvoY = NovaPosicao(randomTable[valor].x, randomTable[valor].y, pacman.direcao)
+    elseif fantasma.estado == ESTADO_FANTASMA_ENUM.recuar then
+        alvoX, alvoY = MapaW, MapaH
+    elseif fantasma.estado == ESTADO_FANTASMA_ENUM.retornar then
+        alvoX, alvoY = 13, 8
+    end
+
+    IA(fantasma, alvoX, alvoY, matriz)
 end
 
 function IARosa(fantasmasArr, fantasma, pacman, matriz)
+    local alvoX, alvoY
+
+    if fantasma.estado == ESTADO_FANTASMA_ENUM.perseguir then
+        alvoX, alvoY = NovaPosicao(pacman.x, pacman.y, pacman.direcao, 2)
+    elseif fantasma.estado == ESTADO_FANTASMA_ENUM.fugir then
+        local randomTable = {
+            { x = fantasma.x + 1, y = fantasma.y },
+            { x = fantasma.x - 1, y = fantasma.y },
+            { x = fantasma.x,     y = fantasma.y + 1 },
+            { x = fantasma.x,     y = fantasma.y - 1 },
+        }
+        local valor = math.random(4)
+
+        alvoX, alvoY = NovaPosicao(randomTable[valor].x, randomTable[valor].y, pacman.direcao)
+    elseif fantasma.estado == ESTADO_FANTASMA_ENUM.recuar then
+        alvoX, alvoY = 0, 0
+    elseif fantasma.estado == ESTADO_FANTASMA_ENUM.retornar then
+        alvoX, alvoY = 13, 8
+    end
+
+    IA(fantasma, alvoX, alvoY, matriz)
 end
 
 function IAAmarelo(fantasmasArr, fantasma, pacman, matriz)
+    local alvoX, alvoY
+
+    if fantasma.estado == ESTADO_FANTASMA_ENUM.perseguir then
+        if math.sqrt((fantasma.x - pacman.x) ^ 2 + (fantasma.y - pacman.y) ^ 2) < 3 then
+            alvoX, alvoY = 0, MapaH
+        else
+            alvoX, alvoY = pacman.x, pacman.y
+        end
+    elseif fantasma.estado == ESTADO_FANTASMA_ENUM.fugir then
+        local randomTable = {
+            { x = fantasma.x + 1, y = fantasma.y },
+            { x = fantasma.x - 1, y = fantasma.y },
+            { x = fantasma.x,     y = fantasma.y + 1 },
+            { x = fantasma.x,     y = fantasma.y - 1 },
+        }
+        local valor = math.random(4)
+
+        alvoX, alvoY = NovaPosicao(randomTable[valor].x, randomTable[valor].y, pacman.direcao)
+    elseif fantasma.estado == ESTADO_FANTASMA_ENUM.recuar then
+        alvoX, alvoY = 0, MapaH
+    elseif fantasma.estado == ESTADO_FANTASMA_ENUM.retornar then
+        alvoX, alvoY = 16, 8
+    end
+
+    IA(fantasma, alvoX, alvoY, matriz)
 end
 
 function PossiveisMovimentos(fantasma, pacman, matriz)
@@ -245,7 +314,7 @@ end
 ---note que a funcao retorna dois valores
 ---o novo x e o novo y
 function NovaPosicao(x, y, mov, dist)
-    dist = 1 / 16
+    dist = dist or (1 / 16)
 
     local novoX = x
     local novoY = y
