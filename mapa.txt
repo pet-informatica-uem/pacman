@@ -6,8 +6,8 @@ x.xxxx.xxx.xxxxxx.xxx.xxxx.x
 x.xxxx.xxx.xxxxxx.xxx.xxxx.x
 x......xxx........xxx......x
 xxx.xxxxxx.xx  xx.xxxxxx.xxx
-xxx........      ........xxx
-xxx.xxxxxx.xx  xx.xxxxxx.xxx
+xxx........x    x........xxx
+xxx.xxxxxx.xxxxxx.xxxxxx.xxx
 x......xxx..    ..xxx......x
 x.xxxx.xxx.xxxxxx.xxx.xxxx.x
 x.xxxx.xxx.xxxxxx.xxx.xxxx.x

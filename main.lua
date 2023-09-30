@@ -14,6 +14,8 @@ local mapa = require("scripts.mapa")
 -- CONSTANTES ------------------------------------------------------------------
 
 local MAX_TEMPO_INVENCIVEL = 3
+local MAX_TEMPO_PERSEGUINDO = 5
+local MAX_TEMPO_RECUANDO = 10
 local STEP = 1/4
 local MOVIMENTO_ENUM = {
     cima = "cima",
@@ -26,6 +28,12 @@ local ESTADOS_ENUM = {
     vitoria = "vitoria",
     derrota = "derrota",
 }
+local ESTADO_FANTASMA_ENUM = {
+    perseguir = "perseguir",
+    recuar = "recuar",
+    fugir = "fugir",
+    retornar = "retornar"
+}
 
 -- VARIAVEIS -------------------------------------------------------------------
 
@@ -33,12 +41,14 @@ local estado = ESTADOS_ENUM.jogando
 local pacman = {x = 14, y = 13, direcao=0}
 local pontos = 0
 local tempoInvencivel = 0
+local tempoPerseguindo = 0
+local tempoRecuando = 10
 local invencivel = false
 local fantasmas = {
-    vermelho = {x = 13, y = 8, direcao=0},
-    azul     = {x = 14, y = 8, direcao=0},
-    rosa     = {x = 15, y = 8, direcao=0},
-    amarelo  = {x = 16, y = 8, direcao=0},
+    vermelho = {x = 13, y = 8, direcao=0, estado=ESTADO_FANTASMA_ENUM.perseguir},
+    azul     = {x = 14, y = 8, direcao=0, estado=ESTADO_FANTASMA_ENUM.perseguir},
+    rosa     = {x = 15, y = 8, direcao=0, estado=ESTADO_FANTASMA_ENUM.perseguir},
+    amarelo  = {x = 16, y = 8, direcao=0, estado=ESTADO_FANTASMA_ENUM.perseguir},
 }
 
 -- como o jogo só e atualiazado em intervalos
@@ -50,7 +60,29 @@ local matriz = mapa.carregar()
 
 -- EXERCICIO!!! ----------------------------------------------------------------
 
-function AtualizarFantasmas(fantasmas, x, y, matriz)
+function AtualizarFantasmas(fantasmas, pacman, matriz, dt)
+    if tempoInvencivel > 0 then
+        tempoPerseguindo = 0
+        tempoRecuando = 0
+        for _, fantasma in pairs(fantasmas) do
+            fantasma.estado = ESTADO_FANTASMA_ENUM.fugir
+        end
+    elseif tempoPerseguindo > 0 then
+        tempoPerseguindo = tempoPerseguindo - dt
+        tempoRecuando = 0
+        for _, fantasma in pairs(fantasmas) do
+            fantasma.estado = ESTADO_FANTASMA_ENUM.perseguir
+        end
+    elseif tempoRecuando > 0 then
+        tempoPerseguindo = 0
+        tempoRecuando = tempoRecuando - dt
+        for _, fantasma in pairs(fantasmas) do
+            fantasma.estado = ESTADO_FANTASMA_ENUM.recuar
+        end
+    else
+        tempoPerseguindo = MAX_TEMPO_PERSEGUINDO
+    end
+
     IAVermelho(fantasmas, fantasmas.vermelho, pacman, matriz)
     IAAzul(fantasmas, fantasmas.azul, pacman, matriz)
     IARosa(fantasmas, fantasmas.rosa, pacman, matriz)
@@ -69,24 +101,27 @@ function MoverFantasma(fantasma, matriz)
 end
 
 function IAVermelho(fantasmasArr, fantasma, pacman, matriz)
-    local alvoX, alvoY = NovaPosicao(pacman.x, pacman.y, pacman.direcao)
+    local alvoX, alvoY
+    
+    if fantasma.estado == ESTADO_FANTASMA_ENUM.perseguir then
+        alvoX, alvoY = NovaPosicao(pacman.x, pacman.y, pacman.direcao, 2)
+    elseif fantasma.estado == ESTADO_FANTASMA_ENUM.fugir then
+        local randomTable = {
+            {x=fantasma.x + 1, y=fantasma.y},
+            {x=fantasma.x - 1, y=fantasma.y},
+            {x=fantasma.x, y=fantasma.y + 1},
+            {x=fantasma.x, y=fantasma.y - 1},
+        }
+        local valor = math.random(4)
+        
+        alvoX, alvoY = NovaPosicao(randomTable[valor].x, randomTable[valor].y, pacman.direcao)
+    elseif fantasma.estado == ESTADO_FANTASMA_ENUM.recuar then
+        alvoX, alvoY = MapaW, 0
+    elseif fantasma.estado == ESTADO_FANTASMA_ENUM.retornar then
+        alvoX, alvoY = 13, 8
+    end 
 
-    local possiveis = PossiveisMovimentos(fantasma, pacman, matriz)
-
-    local melhor = MOVIMENTO_ENUM.baixo
-    local melhorDist = math.huge
-
-    for _, dir in pairs(possiveis) do
-        local novoX, novoY = NovaPosicao(fantasma.x, fantasma.y, dir)
-        local dist = math.sqrt((alvoX - novoX)^2 + (alvoY - novoY)^2)
-
-        if dist < melhorDist then
-            melhor = dir
-            melhorDist = dist
-        end
-    end
-
-    fantasma.direcao = melhor
+    IA(fantasma, alvoX, alvoY, matriz)
 end
 
 function IAAzul(fantasmasArr, fantasma, pacman, matriz)
@@ -94,28 +129,9 @@ function IAAzul(fantasmasArr, fantasma, pacman, matriz)
 end
 
 function IARosa(fantasmasArr, fantasma, pacman, matriz)
-    local alvoX, alvoY = NovaPosicao(pacman.x, pacman.y, pacman.direcao, 2)
-
-    local possiveis = PossiveisMovimentos(fantasma, pacman, matriz)
-
-    local melhor = MOVIMENTO_ENUM.baixo
-    local melhorDist = math.huge
-
-    for _, dir in pairs(possiveis) do
-        local novoX, novoY = NovaPosicao(fantasma.x, fantasma.y, dir)
-        local dist = math.sqrt((alvoX - novoX)^2 + (alvoY - novoY)^2)
-
-        if dist < melhorDist then
-            melhor = dir
-            melhorDist = dist
-        end
-    end
-
-    fantasma.direcao = melhor
 end
 
 function IAAmarelo(fantasmasArr, fantasma, pacman, matriz)
-    
 end
 
 function PossiveisMovimentos(fantasma, pacman, matriz)
@@ -138,6 +154,25 @@ function PossiveisMovimentos(fantasma, pacman, matriz)
     end
 
     return possiveis
+end
+
+function IA(fantasma, alvoX, alvoY, matriz)
+    local possiveis = PossiveisMovimentos(fantasma, pacman, matriz)
+
+    local melhor = MOVIMENTO_ENUM.baixo
+    local melhorDist = 99999
+
+    for _, dir in pairs(possiveis) do
+        local novoX, novoY = NovaPosicao(fantasma.x, fantasma.y, dir)
+        local dist = math.sqrt((alvoX - novoX)^2 + (alvoY - novoY)^2)
+
+        if dist < melhorDist then
+            melhor = dir
+            melhorDist = dist
+        end
+    end
+
+    fantasma.direcao = melhor
 end
 
 -- FUNCOES PRINCIPAIS ----------------------------------------------------------
@@ -178,9 +213,15 @@ function AtualizarJogo(dt)
 
     matriz[pacman.x][pacman.y] = 'p'
 
-    AtualizarFantasmas(fantasmas, pacman.x, pacman.y, matriz)
-    if ChecarDerrota(fantasmas) then
-        estado = ESTADOS_ENUM.derrota
+    AtualizarFantasmas(fantasmas, pacman, matriz, dt)
+    
+    local fantasma = ChecarDerrota(fantasmas)
+    if fantasma then
+        if invencivel then
+            fantasma.estado = ESTADO_FANTASMA_ENUM.retornar
+        else
+            estado = ESTADOS_ENUM.derrota
+        end
     end
 
     contador = 0
@@ -288,13 +329,13 @@ function ChecarPontuacao(x, y, matriz)
 end
 
 function ChecarDerrota(fantasmas)
-    for _, posicaoFantasma in pairs(fantasmas) do
-        if posicaoFantasma.x == pacman.x and posicaoFantasma.y == pacman.y then
-            return true
+    for _, fantasma in pairs(fantasmas) do
+        if fantasma.x == pacman.x and fantasma.y == pacman.y then
+            return fantasma
         end
     end
     
-    return false
+    return nil
 end
 
 function DesenharFantasmas(fantasmas)
