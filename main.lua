@@ -5,7 +5,7 @@ local mapa = require("scripts.mapa")
 
 -- CONSTANTES ------------------------------------------------------------------
 
-local MAX_TEMPO_INVENCIVEL = 3
+local MAX_TEMPO_INVENCIVEL = 10
 local MAX_TEMPO_PERSEGUINDO = 5
 local MAX_TEMPO_RECUANDO = 10
 local MOVIMENTO_ENUM = {
@@ -30,10 +30,8 @@ local ESTADO_FANTASMA_ENUM = {
 
 local estado = ESTADOS_ENUM.jogando
 local pacman = { x = 14, y = 13, direcao = 0 }
-local tempoInvencivel = 0
-local tempoPerseguindo = 0
-local tempoRecuando = 10
-local invencivel = false
+local estadoFantasma = ESTADO_FANTASMA_ENUM.perseguir
+local timerFantasma = 0
 local fantasmas = {
     vermelho = { x = 13, y = 8, direcao = 0, estado = ESTADO_FANTASMA_ENUM.perseguir },
     azul     = { x = 14, y = 8, direcao = 0, estado = ESTADO_FANTASMA_ENUM.perseguir },
@@ -45,38 +43,47 @@ local fantasmas = {
 -- de tempo, é necessário um buffer para
 -- calcular o proximo comando do jogador
 local buffer = MOVIMENTO_ENUM.direita
-local contador = 0
 local matriz = mapa.carregar()
 
 -- EXERCICIO!!! ----------------------------------------------------------------
 
+function MudaEstadoFantasmas(estado)
+    estadoFantasma = estado
+    for _, fantasma in pairs(fantasmas) do
+        if fantasma.estado ~= ESTADO_FANTASMA_ENUM.retornar then
+            fantasma.estado = estado
+        end
+    end
+end
+
 function AtualizarFantasmas(fantasmas, pacman, matriz, dt)
-    if tempoInvencivel > 0 then
-        tempoPerseguindo = 0
-        tempoRecuando = 0
-        for _, fantasma in pairs(fantasmas) do
-            fantasma.estado = ESTADO_FANTASMA_ENUM.fugir
-        end
-    elseif tempoPerseguindo > 0 then
-        tempoPerseguindo = tempoPerseguindo - dt
-        tempoRecuando = 0
-        for _, fantasma in pairs(fantasmas) do
-            fantasma.estado = ESTADO_FANTASMA_ENUM.perseguir
-        end
-    elseif tempoRecuando > 0 then
-        tempoPerseguindo = 0
-        tempoRecuando = tempoRecuando - dt
-        for _, fantasma in pairs(fantasmas) do
-            fantasma.estado = ESTADO_FANTASMA_ENUM.recuar
-        end
-    else
-        tempoPerseguindo = MAX_TEMPO_PERSEGUINDO
+    if timerFantasma > 0 and estadoFantasma == ESTADO_FANTASMA_ENUM.fugir then
+        MudaEstadoFantasmas(ESTADO_FANTASMA_ENUM.fugir)
+    elseif estadoFantasma == ESTADO_FANTASMA_ENUM.fugir then
+        timerFantasma = MAX_TEMPO_RECUANDO
+
+        MudaEstadoFantasmas(ESTADO_FANTASMA_ENUM.recuar)
     end
 
-    IAVermelho(fantasmas, fantasmas.vermelho, pacman, matriz)
-    IAAzul(fantasmas, fantasmas.azul, pacman, matriz)
-    IARosa(fantasmas, fantasmas.rosa, pacman, matriz)
-    IAAmarelo(fantasmas, fantasmas.amarelo, pacman, matriz)
+    if  timerFantasma > 0 then
+        print(timerFantasma)
+        timerFantasma = timerFantasma - dt
+    else
+        if estadoFantasma == ESTADO_FANTASMA_ENUM.perseguir then
+            timerFantasma = MAX_TEMPO_RECUANDO
+    
+            MudaEstadoFantasmas(ESTADO_FANTASMA_ENUM.recuar)
+        elseif estadoFantasma == ESTADO_FANTASMA_ENUM.recuar then
+            timerFantasma = MAX_TEMPO_PERSEGUINDO
+    
+            MudaEstadoFantasmas(ESTADO_FANTASMA_ENUM.perseguir)
+        end
+    end
+
+    IAVermelho(fantasmas.vermelho, pacman, matriz)
+    IAAzul(fantasmas.azul, pacman, matriz)
+    IARosa(fantasmas.rosa, pacman, matriz)
+    IAAmarelo(fantasmas.amarelo, pacman, matriz)
 
     for _, fantasma in pairs(fantasmas) do
         MoverFantasma(fantasma, matriz)
@@ -86,15 +93,20 @@ end
 -- 1) Crie uma função para mover um determinado fantasma
 function MoverFantasma(fantasma, matriz)
     if not VerificarColisao(fantasma.x, fantasma.y, fantasma.direcao, matriz) then
-        fantasma.x, fantasma.y = NovaPosicao(fantasma.x, fantasma.y, fantasma.direcao)
+        local vel = 1/16
+        fantasma.x, fantasma.y = NovaPosicao(fantasma.x, fantasma.y, fantasma.direcao, vel)
     end
 end
 
-function IAVermelho(fantasmasArr, fantasma, pacman, matriz)
+function IAVermelho(fantasma, pacman, matriz)
+    if fantasma.x == 13 and fantasma.y == 8 and fantasma.estado == ESTADO_FANTASMA_ENUM.retornar then
+        fantasma.estado = estadoFantasma
+    end
+
     local alvoX, alvoY
 
     if fantasma.estado == ESTADO_FANTASMA_ENUM.perseguir then
-        alvoX, alvoY = NovaPosicao(pacman.x, pacman.y, pacman.direcao, 2)
+        alvoX, alvoY = NovaPosicao(pacman.x, pacman.y, pacman.direcao)
     elseif fantasma.estado == ESTADO_FANTASMA_ENUM.fugir then
         local randomTable = {
             { x = fantasma.x + 1, y = fantasma.y },
@@ -114,13 +126,13 @@ function IAVermelho(fantasmasArr, fantasma, pacman, matriz)
     IA(fantasma, alvoX, alvoY, matriz)
 end
 
-function IAAzul(fantasmasArr, fantasma, pacman, matriz)
+function IAAzul(fantasma, pacman, matriz)
 end
 
-function IARosa(fantasmasArr, fantasma, pacman, matriz)
+function IARosa(fantasma, pacman, matriz)
 end
 
-function IAAmarelo(fantasmasArr, fantasma, pacman, matriz)
+function IAAmarelo(fantasma, pacman, matriz)
 end
 
 function PossiveisMovimentos(fantasma, pacman, matriz)
@@ -177,12 +189,7 @@ function love.update(dt)
 end
 
 function AtualizarJogo(dt)
-    if tempoInvencivel > 0 then
-        tempoInvencivel = tempoInvencivel - dt
-        invencivel = true
-    else
-        invencivel = false
-    end
+
 
     VerificaBuffer()
 
@@ -190,20 +197,23 @@ function AtualizarJogo(dt)
 
     if not VerificarColisao(pacman.x, pacman.y, pacman.direcao, matriz) then
         pacman.x, pacman.y = NovaPosicao(pacman.x, pacman.y, pacman.direcao)
+
+        if matriz[math.floor(pacman.x + 0.5)][math.floor(pacman.y + 0.5)] == 'c' then
+            estadoFantasma = ESTADO_FANTASMA_ENUM.fugir
+            timerFantasma = MAX_TEMPO_INVENCIVEL
+        end
     end
 
     AtualizarFantasmas(fantasmas, pacman, matriz, dt)
 
     local fantasma = ChecarDerrota(fantasmas)
     if fantasma then
-        if invencivel then
+        if fantasma.estado == ESTADO_FANTASMA_ENUM.fugir or fantasma.estado == ESTADO_FANTASMA_ENUM.retornar then
             fantasma.estado = ESTADO_FANTASMA_ENUM.retornar
         else
             estado = ESTADOS_ENUM.derrota
         end
     end
-
-    contador = 0
 end
 
 function love.draw()
@@ -245,7 +255,7 @@ end
 ---note que a funcao retorna dois valores
 ---o novo x e o novo y
 function NovaPosicao(x, y, mov, dist)
-    dist = 1 / 16
+    dist = dist or (1 / 16)
 
     local novoX = x
     local novoY = y
@@ -314,29 +324,77 @@ function ChecarDerrota(fantasmas)
 end
 
 function DesenharFantasmas(fantasmas)
-    love.graphics.draw(
-        ASSETS_MAP.fantasma_vermelho,
-        (fantasmas.vermelho.x - 1) * (16),
-        (fantasmas.vermelho.y - 1) * (16)
-    )
+    if estadoFantasma == ESTADO_FANTASMA_ENUM.fugir then
+        love.graphics.setColor(0, 0, 1)
+    else
+        love.graphics.setColor(1, 1, 1)
+    end
 
-    love.graphics.draw(
-        ASSETS_MAP.fantasma_azul,
-        (fantasmas.azul.x - 1) * (16),
-        (fantasmas.azul.y - 1) * (16)
-    )
+    if fantasmas.vermelho.estado == ESTADO_FANTASMA_ENUM.retornar then
+        love.graphics.rectangle(
+            "fill", 
+            (fantasmas.vermelho.x - 1) * (16),
+            (fantasmas.vermelho.y - 1) * (16),
+            16,
+            16
+        )
+    else
+        love.graphics.draw(
+            ASSETS_MAP.fantasma_vermelho,
+            (fantasmas.vermelho.x - 1) * (16),
+            (fantasmas.vermelho.y - 1) * (16)
+        )
+    end
 
-    love.graphics.draw(
-        ASSETS_MAP.fantasma_rosa,
-        (fantasmas.rosa.x - 1) * (16),
-        (fantasmas.rosa.y - 1) * (16)
-    )
+    if fantasmas.azul.estado == ESTADO_FANTASMA_ENUM.retornar then
+        love.graphics.rectangle(
+            "fill", 
+            (fantasmas.azul.x - 1) * (16),
+            (fantasmas.azul.y - 1) * (16),
+            16,
+            16
+        )
+    else
+        love.graphics.draw(
+            ASSETS_MAP.fantasma_azul,
+            (fantasmas.azul.x - 1) * (16),
+            (fantasmas.azul.y - 1) * (16)
+        )
+    end
 
-    love.graphics.draw(
-        ASSETS_MAP.fantasma_amarelo,
-        (fantasmas.amarelo.x - 1) * (16),
-        (fantasmas.amarelo.y - 1) * (16)
-    )
+    if fantasmas.rosa.estado == ESTADO_FANTASMA_ENUM.retornar then
+        love.graphics.rectangle(
+            "fill", 
+            (fantasmas.rosa.x - 1) * (16),
+            (fantasmas.rosa.y - 1) * (16),
+            16,
+            16
+        )
+    else
+        love.graphics.draw(
+            ASSETS_MAP.fantasma_rosa,
+            (fantasmas.rosa.x - 1) * (16),
+            (fantasmas.rosa.y - 1) * (16)
+        )
+    end
+
+    if fantasmas.amarelo.estado == ESTADO_FANTASMA_ENUM.retornar then
+        love.graphics.rectangle(
+            "fill", 
+            (fantasmas.amarelo.x - 1) * (16),
+            (fantasmas.amarelo.y - 1) * (16),
+            16,
+            16
+        )
+    else
+        love.graphics.draw(
+            ASSETS_MAP.fantasma_amarelo,
+            (fantasmas.amarelo.x - 1) * (16),
+            (fantasmas.amarelo.y - 1) * (16)
+        )
+    end
+
+    love.graphics.setColor(1, 1, 1)
 end
 
 function DesenharPacman(pacman)
