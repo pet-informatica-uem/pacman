@@ -1,0 +1,16 @@
+28 15
+xxxxxxxxxxxxxxxxxxxxxxxxxxxx
+xc.........xxxxxx.........cx
+x.xxxx.xxx........xxx.xxxx.x
+x.xxxx.xxx.xxxxxx.xxx.xxxx.x
+x.xxxx.xxx.xxxxxx.xxx.xxxx.x
+x......xxx........xxx......x
+xxx.xxxxxx.xx  xx.xxxxxx.xxx
+xxx........      ........xxx
+xxx.xxxxxx.xx  xx.xxxxxx.xxx
+x......xxx..    ..xxx......x
+x.xxxx.xxx.xxxxxx.xxx.xxxx.x
+x.xxxx.xxx.xxxxxx.xxx.xxxx.x
+x.xxxx.xxx........xxx.xxxx.x
+xc.........xxxxxx.........cx
+xxxxxxxxxxxxxxxxxxxxxxxxxxxx
