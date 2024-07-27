@@ -179,9 +179,14 @@ function love.load()
     love.graphics.setDefaultFilter("nearest", "nearest")
 end
 
+local acc = 0
 function love.update(dt)
-    if estado == ESTADOS_ENUM.jogando then
-        AtualizarJogo(dt)
+    acc = acc + dt
+    while acc > 1/60 do
+        if estado == ESTADOS_ENUM.jogando then
+            AtualizarJogo(dt)
+        end
+        acc = acc - 1/60
     end
 end
 
